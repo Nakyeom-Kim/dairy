@@ -31,3 +31,62 @@ export async function analyzeDiary(content: string) {
     throw new Error(`분석 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
   }
 }
+
+export async function saveDiary(content: string) {
+  const scriptUrl = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL;
+  
+  if (!scriptUrl) {
+    throw new Error("Apps Script URL이 설정되지 않았습니다.");
+  }
+
+  const now = new Date();
+  const datetime = now.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  try {
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain", // Apps Script doPost는 text/plain으로 보내야 하는 경우가 많음
+      },
+      body: JSON.stringify({
+        datetime,
+        diary: content,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("저장 중 에러:", error);
+    throw new Error("Google 시트 저장에 실패했습니다.");
+  }
+}
+
+export async function getDiaries() {
+  const scriptUrl = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL;
+  
+  if (!scriptUrl) {
+    throw new Error("Apps Script URL이 설정되지 않았습니다.");
+  }
+
+  try {
+    const response = await fetch(scriptUrl, {
+      method: "GET",
+      cache: "no-store", // 매번 최신 데이터를 가져옴
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("가져오기 중 에러:", error);
+    throw new Error("일기 목록을 가져오는데 실패했습니다.");
+  }
+}
